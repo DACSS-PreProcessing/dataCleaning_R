@@ -1,0 +1,302 @@
+<br> 
+<center><img src="https://github.com/DACSS-PreProcessing/Week_1_main/blob/main/pics/LogoSimple.png?raw=true" width="700"></center>
+
+
+
+# Data Cleaning in R
+
+
+
+## 1. Collect data tables
+
+
+### Read a File
+
+I have the data on the **Human Development Index** in a  folder in a GitHub repo, which I downloaded from this [link](https://hdr.undp.org/data-center/documentation-and-downloads) (_Table 1_).
+
+```{r, eval=FALSE}
+rm(list = ls())
+# Location of data file
+linkFile="https://github.com/DACSS-PreProcessing/dataCleaning/raw/main/data/HDI_Table.xlsx"
+```
+
+Reading an Excel file:
+
+```{r, echo=FALSE,message=FALSE}
+
+
+# Location of data file
+linkFile="https://github.com/DACSS-PreProcessing/dataCleaning/raw/main/data/HDI_Table.xlsx"
+
+# Data
+hdiFile=rio::import(linkFile)
+```
+Take a look:
+
+```{r, eval=FALSE}
+head(hdiFile,10)
+```
+
+## 2. Cleaning Process
+
+
+### Fix column names
+
+#### Recover row of column names
+
+Notice that we do not have the right column names. So we need to save them before we go on:
+
+
+```{r, eval=FALSE}
+RealHeaders=paste(c(hdiFile[5,1:2],hdiFile[4,3:15]))
+
+# these are:
+RealHeaders
+
+```
+
+Let's put the rown in the right place:
+
+```{r, eval=FALSE}
+# rename all the columns
+names(hdiFile)=RealHeaders# R will rename duplicated column names
+
+# newDF
+better_1=hdiFile
+
+# see head
+head(better_1)
+```
+
+
+#### Subset to drop unneeded columns
+
+
+Notice the repeated column names (HDI rank) and _NaN_. Notice also that we do not need the last three columns. Let's  rewrite the original:
+
+```{r, eval=FALSE}
+# without the last four
+better_2=better_1[,1:11]
+```
+
+We still have column names with missing values:
+```{r, eval=FALSE}
+names(better_2)
+```
+
+...let's get rid of those:
+
+```{r, eval=FALSE}
+# positions with NA
+grep("NA",names(better_2))
+```
+We use the previous result to rewrite the original:
+
+```{r, eval=FALSE}
+# save BAD positions 
+
+BadHeaders=grep("NA",names(better_2))
+
+#subsetting again to keep the good headers
+better_2=better_2[,-grep("NA",names(better_2))]
+
+#see
+head(better_2)
+```
+
+It is time to offer a better set of column names.
+
+#### Clean column names
+
+The current situation:
+
+```{r, eval=FALSE}
+better_3=better_2
+names(better_3)
+```
+
+Notice above that the columns:
+* Have acronyms in parenthesis.
+* Have spaces between words.
+
+**Option 1**: Cleaner column names without _blank spaces_, underscores instead of _blank spaces_.
+
+```{r, eval=FALSE}
+# bye anything between parentheses
+
+pattern1='\\(.+\\)'
+gsub(pattern1,replacement = "",names(better_3))
+```
+```{r, eval=FALSE}
+# bye anything between parentheses, bye leading-trailing spaces
+library(magrittr)
+gsub(pattern1,'',names(better_3))%>%trimws()
+
+```
+```{r, eval=FALSE}
+# bye anything between parentheses, bye leading-trailing spaces, title case
+gsub(pattern1,'',names(better_3))%>%trimws()%>%tools::toTitleCase()
+```
+```{r, eval=FALSE}
+# bye anything between parentheses, bye leading-trailing spaces, title case, spaces replaced
+pattern2='\\s+'
+gsub(pattern1,'',names(better_3))%>%trimws()%>%tools::toTitleCase()%>%gsub(pattern2,'_',.)
+```
+
+**Option 2**: Shorthening using Camel case
+
+This requires a good data dictionary in your README!
+
+```{r, eval=FALSE}
+# one step before we had...
+
+newNames=gsub(pattern1,'',names(better_3))%>%trimws()%>%tools::toTitleCase()
+newNames
+```
+```{r, eval=FALSE}
+names_camel=newNames%>%gsub(pattern2,'',.)
+names_camel
+```
+**Option 3**: Shorthening using Acronyms
+
+We will do this only for the _variables_:
+
+```{r, eval=FALSE}
+acronyms=abbreviate(newNames[-c(1,2)],1,named = F)
+acronyms
+```
+
+```{r, eval=FALSE}
+
+```
+
+```{r, eval=FALSE}
+alreadyShorthened=names_camel[1:2]
+names(better_3)= c(alreadyShorthened, acronyms)
+names(better_3)
+```
+
+Let's keep the last alternative:
+
+```{r, eval=FALSE}
+head(better_3,10)
+```
+
+### Fix Data contents
+
+After becoming familar with the data, we focus on data contents.
+
+#### Cleaning based on cells with missing values:
+
+See all rows with at least one missing value:
+
+```{r, eval=FALSE}
+# next DF
+better_4=better_3
+
+library(dplyr)
+better_4 %>% filter(if_all(3:7, is.na))
+```
+
+The exploration let us find that we have 84 rows with at least one missing value.
+
+* First decision, drop rows where all variable values are missing:
+```{r, eval=FALSE}
+# will keep rows where there is at least one value in the variable columns
+
+better_4=better_4 %>% filter(if_any(3:7, ~!is.na(.x)))
+
+# filtered!
+better_4
+```
+
+
+* Second decision: drop the rows with where 'Country', the ID, is missing.
+
+
+```{r, eval=FALSE}
+better_4=better_4[complete.cases(better_4$Country),]
+better_4
+```
+
+```{r, eval=FALSE}
+# detecting non-numeric cells in HDI
+better_4[!complete.cases(as.numeric(better_4$HDI)),]
+```
+
+
+```{r, eval=FALSE}
+# then
+better_4=better_4[complete.cases(as.numeric(better_4$HDI)),]
+better_4
+```
+
+
+Let's explore why some rows have no ranking:
+
+```{r, eval=FALSE}
+better_4[!complete.cases(better_4$HDIRank),]
+```
+```{r, eval=FALSE}
+better_4=better_4[complete.cases(as.numeric(better_4$HDIRank)),]
+better_4
+```
+
+#### Cleaning based on cell contents
+
+It seems pretty clean. However, let's play safe and get rid of trailing or leading spaces :
+
+```{r, eval=FALSE}
+# no trailing nor leading spaces
+better_4$Country=trimws(better_4$Country,whitespace = "[\\h\\v]")
+```
+
+Are the numeric values read as strings?
+```{r, eval=FALSE}
+better_4[1,]
+```
+If you do not get a zero, you have dirty numeric values:
+```{r, eval=FALSE}
+colSums(is.na(apply(better_4[,-c(1,2)],2, as.numeric)))
+```
+Notice this cases:
+
+```{r, eval=FALSE}
+sum(is.na(as.numeric(c('1','34',34))))
+```
+```{r, eval=FALSE}
+sum(is.na(as.numeric(c('1,8','3..4',34))))
+```
+
+We did not have a cell with the inappropiate characters representing numerical values, but what if:
+
+```{r, eval=FALSE}
+var1=c("1",'$3,4',"5.6","2.3",1)
+var2=c("1.3",'3 400',"5'6","211.333",15)
+test=as.data.frame(cbind(var1,var2))
+test
+```
+
+This code may come in handy:
+
+```{r, eval=FALSE}
+badValues=c() # empty vector, here we will save the wrong strings
+goodStringForNumbers='^\\d+\\.*\\d*$'
+for (col in names(test)){
+    currentBad=grep(goodStringForNumbers, test[,col], invert = TRUE, value = TRUE)
+    badValues=c(badValues,unique(currentBad))
+    
+}
+
+unique(badValues)
+```
+
+
+
+We finished the cleaning. Let's reset the row indexes to finish the job:
+
+```{r, eval=FALSE}
+rownames(better_4)=NULL
+better_4
+```
+
