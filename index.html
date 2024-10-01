@@ -488,6 +488,9 @@ missing.</li>
 </ul>
 <pre class="r"><code>better_4=better_4[complete.cases(better_4$Country),]
 better_4</code></pre>
+<ul>
+<li>Third decision : Keep rows with some important values:</li>
+</ul>
 <pre class="r"><code># detecting non-numeric cells in HDI
 better_4[!complete.cases(as.numeric(better_4$HDI)),]</code></pre>
 <pre class="r"><code># then
@@ -508,7 +511,7 @@ better_4$Country=trimws(better_4$Country,whitespace = &quot;[\\h\\v]&quot;)</cod
 <pre class="r"><code>better_4[1,]</code></pre>
 <p>If you do not get a zero, you have dirty numeric values:</p>
 <pre class="r"><code>colSums(is.na(apply(better_4[,-c(1,2)],2, as.numeric)))</code></pre>
-<p>Notice this cases:</p>
+<p>Notice these cases:</p>
 <pre class="r"><code>sum(is.na(as.numeric(c(&#39;1&#39;,&#39;34&#39;,34))))</code></pre>
 <pre class="r"><code>sum(is.na(as.numeric(c(&#39;1,8&#39;,&#39;3..4&#39;,34))))</code></pre>
 <p>We did not have a cell with the inappropiate characters representing

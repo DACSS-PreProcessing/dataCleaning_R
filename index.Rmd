@@ -219,6 +219,8 @@ better_4=better_4[complete.cases(better_4$Country),]
 better_4
 ```
 
+* Third decision : Keep rows with some important values:
+
 ```{r, eval=FALSE}
 # detecting non-numeric cells in HDI
 better_4[!complete.cases(as.numeric(better_4$HDI)),]
@@ -259,7 +261,8 @@ If you do not get a zero, you have dirty numeric values:
 ```{r, eval=FALSE}
 colSums(is.na(apply(better_4[,-c(1,2)],2, as.numeric)))
 ```
-Notice this cases:
+
+Notice these cases:
 
 ```{r, eval=FALSE}
 sum(is.na(as.numeric(c('1','34',34))))
