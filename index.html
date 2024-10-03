@@ -368,7 +368,7 @@ folder in a GitHub repo, which I downloaded from this <a href="https://hdr.undp.
 <pre class="r"><code>rm(list = ls())
 # Location of data file
 linkFile=&quot;https://github.com/DACSS-PreProcessing/dataCleaning/raw/main/data/HDI_Table.xlsx&quot;</code></pre>
-<p>Reading an Excel file:</p>
+<p>Reading the Excel file:</p>
 <p>Take a look:</p>
 <pre class="r"><code>head(hdiFile,10)</code></pre>
 </div>
@@ -377,8 +377,8 @@ linkFile=&quot;https://github.com/DACSS-PreProcessing/dataCleaning/raw/main/data
 <h2>2. Cleaning Process</h2>
 <div id="fix-column-names" class="section level3">
 <h3>Fix column names</h3>
-<div id="recover-row-of-column-names" class="section level4">
-<h4>Recover row of column names</h4>
+<div id="recover-column-names" class="section level4">
+<h4>Recover column names</h4>
 <p>Notice that we do not have the right column names. So we need to save
 them before we go on:</p>
 <pre class="r"><code>RealHeaders=paste(c(hdiFile[5,1:2],hdiFile[4,3:15]))
@@ -404,19 +404,15 @@ original:</p>
 better_2=better_1[,1:11]</code></pre>
 <p>We still have column names with missing values:</p>
 <pre class="r"><code>names(better_2)</code></pre>
-<p>…let’s get rid of those:</p>
-<pre class="r"><code># positions with NA
-grep(&quot;NA&quot;,names(better_2))</code></pre>
-<p>We use the previous result to rewrite the original:</p>
+<p>…let’s get rid of those columns with the text “NA”:</p>
 <pre class="r"><code># save BAD positions 
-
-BadHeaders=grep(&quot;NA&quot;,names(better_2))
-
-#subsetting again to keep the good headers
+BadHeaders=grep(&quot;NA&quot;,names(better_2)) #&quot;NA&quot; is NA
+BadHeaders</code></pre>
+<p>We use the previous result to rewrite the original:</p>
+<pre class="r"><code>#subsetting again to keep the good headers
 better_2=better_2[,-grep(&quot;NA&quot;,names(better_2))]
-
 #see
-head(better_2)</code></pre>
+names(better_2)</code></pre>
 <p>It is time to offer a better set of column names.</p>
 </div>
 <div id="clean-column-names" class="section level4">
@@ -426,36 +422,32 @@ head(better_2)</code></pre>
 names(better_3)</code></pre>
 <p>Notice above that the columns: * Have acronyms in parenthesis. * Have
 spaces between words.</p>
-<p><strong>Option 1</strong>: Cleaner column names without <em>blank
-spaces</em>, underscores instead of <em>blank spaces</em>.</p>
-<pre class="r"><code># bye anything between parentheses
+<p>Let’s get rid of the acronyms in parentheses:</p>
+<pre class="r"><code># bye anything between parentheses (then TRIM and title case)
+
+library(magrittr)
 
 pattern1=&#39;\\(.+\\)&#39;
-gsub(pattern1,replacement = &quot;&quot;,names(better_3))</code></pre>
-<pre class="r"><code># bye anything between parentheses, bye leading-trailing spaces
-library(magrittr)
-gsub(pattern1,&#39;&#39;,names(better_3))%&gt;%trimws()</code></pre>
-<pre class="r"><code># bye anything between parentheses, bye leading-trailing spaces, title case
-gsub(pattern1,&#39;&#39;,names(better_3))%&gt;%trimws()%&gt;%tools::toTitleCase()</code></pre>
-<pre class="r"><code># bye anything between parentheses, bye leading-trailing spaces, title case, spaces replaced
-pattern2=&#39;\\s+&#39;
-gsub(pattern1,&#39;&#39;,names(better_3))%&gt;%trimws()%&gt;%tools::toTitleCase()%&gt;%gsub(pattern2,&#39;_&#39;,.)</code></pre>
-<p><strong>Option 2</strong>: Shorthening using Camel case</p>
-<p>This requires a good data dictionary in your README!</p>
-<pre class="r"><code># one step before we had...
-
-newNames=gsub(pattern1,&#39;&#39;,names(better_3))%&gt;%trimws()%&gt;%tools::toTitleCase()
-newNames</code></pre>
-<pre class="r"><code>names_camel=newNames%&gt;%gsub(pattern2,&#39;&#39;,.)
-names_camel</code></pre>
-<p><strong>Option 3</strong>: Shorthening using Acronyms</p>
-<p>We will do this only for the <em>variables</em>:</p>
-<pre class="r"><code>acronyms=abbreviate(newNames[-c(1,2)],1,named = F)
-acronyms</code></pre>
-<pre class="r"><code>alreadyShorthened=names_camel[1:2]
-names(better_3)= c(alreadyShorthened, acronyms)
+names(better_3)=gsub(pattern1,replacement = &quot;&quot;,names(better_3))%&gt;%
+                    trimws()%&gt;%
+                        tools::toTitleCase()
 names(better_3)</code></pre>
-<p>Let’s keep the last alternative:</p>
+<p><strong>Option 1</strong>: Underscores instead of <em>blank
+spaces</em>.</p>
+<pre class="r"><code># spaces replaced
+pattern2=&#39;\\s+&#39;
+names(better_3)%&gt;%gsub(pattern2,&#39;_&#39;,.)</code></pre>
+<p><strong>Option 2</strong>: Shorthening using Camel case</p>
+<pre class="r"><code># bye spaces
+names(better_3)%&gt;%gsub(pattern2,&#39;&#39;,.)</code></pre>
+<p><strong>Option 3</strong>: Shorthening using Acronyms</p>
+<p>This option requires a good data dictionary in your README. Notice we
+will do this only for the <em>variables</em>:</p>
+<pre class="r"><code>acronyms=abbreviate(names(better_3)[-c(1,2)],1,named = F)
+acronyms</code></pre>
+<pre class="r"><code>names(better_3)= c(names(better_3)[1:2], acronyms)
+names(better_3)</code></pre>
+<p>We keep the last alternative:</p>
 <pre class="r"><code>head(better_3,10)</code></pre>
 </div>
 </div>
@@ -468,8 +460,7 @@ names(better_3)</code></pre>
 <pre class="r"><code># next DF
 better_4=better_3
 
-library(dplyr)
-better_4 %&gt;% filter(if_all(3:7, is.na))</code></pre>
+better_4[!complete.cases(better_4),] </code></pre>
 <p>The exploration let us find that we have 84 rows with at least one
 missing value.</p>
 <ul>
@@ -497,12 +488,12 @@ better_4[!complete.cases(as.numeric(better_4$HDI)),]</code></pre>
 better_4=better_4[complete.cases(as.numeric(better_4$HDI)),]
 better_4</code></pre>
 <p>Let’s explore why some rows have no ranking:</p>
-<pre class="r"><code>better_4[!complete.cases(better_4$HDIRank),]</code></pre>
-<pre class="r"><code>better_4=better_4[complete.cases(as.numeric(better_4$HDIRank)),]
+<pre class="r"><code>better_4[!complete.cases(better_4[,c(&#39;HDI Rank&#39;)]),]</code></pre>
+<pre class="r"><code>better_4=better_4[complete.cases(better_4[,c(&#39;HDI Rank&#39;)]),]
 better_4</code></pre>
 </div>
-<div id="cleaning-based-on-cell-contents" class="section level4">
-<h4>Cleaning based on cell contents</h4>
+<div id="preventive-cleaning" class="section level4">
+<h4>Preventive Cleaning</h4>
 <p>It seems pretty clean. However, let’s play safe and get rid of
 trailing or leading spaces :</p>
 <pre class="r"><code># no trailing nor leading spaces

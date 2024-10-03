@@ -20,14 +20,9 @@ rm(list = ls())
 linkFile="https://github.com/DACSS-PreProcessing/dataCleaning/raw/main/data/HDI_Table.xlsx"
 ```
 
-Reading an Excel file:
+Reading the Excel file:
 
-```{r, echo=FALSE,message=FALSE}
-
-
-# Location of data file
-linkFile="https://github.com/DACSS-PreProcessing/dataCleaning/raw/main/data/HDI_Table.xlsx"
-
+```{r, eval=F,echo=FALSE,message=FALSE}
 # Data
 hdiFile=rio::import(linkFile)
 ```
@@ -42,12 +37,13 @@ head(hdiFile,10)
 
 ### Fix column names
 
-#### Recover row of column names
+#### Recover column names
 
 Notice that we do not have the right column names. So we need to save them before we go on:
 
 
 ```{r, eval=FALSE}
+
 RealHeaders=paste(c(hdiFile[5,1:2],hdiFile[4,3:15]))
 
 # these are:
@@ -83,25 +79,18 @@ We still have column names with missing values:
 ```{r, eval=FALSE}
 names(better_2)
 ```
-
-...let's get rid of those:
-
-```{r, eval=FALSE}
-# positions with NA
-grep("NA",names(better_2))
-```
-We use the previous result to rewrite the original:
-
+...let's get rid of those columns with the text "NA":
 ```{r, eval=FALSE}
 # save BAD positions 
-
-BadHeaders=grep("NA",names(better_2))
-
+BadHeaders=grep("NA",names(better_2)) #"NA" is NA
+BadHeaders
+```
+We use the previous result to rewrite the original:
+```{r, eval=FALSE}
 #subsetting again to keep the good headers
 better_2=better_2[,-grep("NA",names(better_2))]
-
 #see
-head(better_2)
+names(better_2)
 ```
 
 It is time to offer a better set of column names.
@@ -119,64 +108,52 @@ Notice above that the columns:
 * Have acronyms in parenthesis.
 * Have spaces between words.
 
-**Option 1**: Cleaner column names without _blank spaces_, underscores instead of _blank spaces_.
+Let's get rid of the acronyms in parentheses:
 
 ```{r, eval=FALSE}
-# bye anything between parentheses
+# bye anything between parentheses (then TRIM and title case)
+
+library(magrittr)
 
 pattern1='\\(.+\\)'
-gsub(pattern1,replacement = "",names(better_3))
+names(better_3)=gsub(pattern1,replacement = "",names(better_3))%>%
+                    trimws()%>%
+                        tools::toTitleCase()
+names(better_3)
 ```
-```{r, eval=FALSE}
-# bye anything between parentheses, bye leading-trailing spaces
-library(magrittr)
-gsub(pattern1,'',names(better_3))%>%trimws()
 
-```
+
+**Option 1**: Underscores instead of _blank spaces_.
+
+
 ```{r, eval=FALSE}
-# bye anything between parentheses, bye leading-trailing spaces, title case
-gsub(pattern1,'',names(better_3))%>%trimws()%>%tools::toTitleCase()
-```
-```{r, eval=FALSE}
-# bye anything between parentheses, bye leading-trailing spaces, title case, spaces replaced
+# spaces replaced
 pattern2='\\s+'
-gsub(pattern1,'',names(better_3))%>%trimws()%>%tools::toTitleCase()%>%gsub(pattern2,'_',.)
+names(better_3)%>%gsub(pattern2,'_',.)
 ```
 
 **Option 2**: Shorthening using Camel case
 
-This requires a good data dictionary in your README!
 
 ```{r, eval=FALSE}
-# one step before we had...
+# bye spaces
+names(better_3)%>%gsub(pattern2,'',.)
+```
 
-newNames=gsub(pattern1,'',names(better_3))%>%trimws()%>%tools::toTitleCase()
-newNames
-```
-```{r, eval=FALSE}
-names_camel=newNames%>%gsub(pattern2,'',.)
-names_camel
-```
 **Option 3**: Shorthening using Acronyms
 
-We will do this only for the _variables_:
+This option requires a good data dictionary in your README. Notice we will do this only for the _variables_:
 
 ```{r, eval=FALSE}
-acronyms=abbreviate(newNames[-c(1,2)],1,named = F)
+acronyms=abbreviate(names(better_3)[-c(1,2)],1,named = F)
 acronyms
 ```
-
 ```{r, eval=FALSE}
-
-```
-
-```{r, eval=FALSE}
-alreadyShorthened=names_camel[1:2]
-names(better_3)= c(alreadyShorthened, acronyms)
+names(better_3)= c(names(better_3)[1:2], acronyms)
 names(better_3)
 ```
 
-Let's keep the last alternative:
+We keep the last alternative:
 
 ```{r, eval=FALSE}
 head(better_3,10)
@@ -194,8 +171,7 @@ See all rows with at least one missing value:
 # next DF
 better_4=better_3
 
-library(dplyr)
-better_4 %>% filter(if_all(3:7, is.na))
+better_4[!complete.cases(better_4),] 
 ```
 
 The exploration let us find that we have 84 rows with at least one missing value.
@@ -237,14 +213,14 @@ better_4
 Let's explore why some rows have no ranking:
 
 ```{r, eval=FALSE}
-better_4[!complete.cases(better_4$HDIRank),]
+better_4[!complete.cases(better_4[,c('HDI Rank')]),]
 ```
 ```{r, eval=FALSE}
-better_4=better_4[complete.cases(as.numeric(better_4$HDIRank)),]
+better_4=better_4[complete.cases(better_4[,c('HDI Rank')]),]
 better_4
 ```
 
-#### Cleaning based on cell contents
+#### Preventive Cleaning
 
 It seems pretty clean. However, let's play safe and get rid of trailing or leading spaces :
 
@@ -257,6 +233,7 @@ Are the numeric values read as strings?
 ```{r, eval=FALSE}
 better_4[1,]
 ```
+
 If you do not get a zero, you have dirty numeric values:
 ```{r, eval=FALSE}
 colSums(is.na(apply(better_4[,-c(1,2)],2, as.numeric)))
