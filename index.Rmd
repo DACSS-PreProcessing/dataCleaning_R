@@ -5,7 +5,10 @@
 
 # Data Cleaning in R
 
-
+```{r klippy, echo=FALSE, include=TRUE}
+# remotes::install_github("rlesur/klippy")
+klippy::klippy(position = c('top', 'right'))
+```
 
 ## 1. Collect data tables
 
